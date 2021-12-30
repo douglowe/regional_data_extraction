@@ -1,0 +1,22 @@
+name: emep_extract
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - descartes
+  - cartopy
+  - scipy
+  - shapely==1.7.1
+  - pyreadr
+  - joblib
+  - geopandas
+  - salem
+  - xarray
+  - matplotlib
+  - netcdf4
+  - ipython
+  - pyproj
+  - python[version='>=3.7']
+  - numpy
+  - pandas
