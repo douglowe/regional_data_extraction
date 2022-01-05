@@ -1,7 +1,13 @@
+#!/bin/bash --login
+#$ -N emep_extraction            
+#$ -cwd
+
 # script for building daily movies, and combining these into one movie file 
 
+module load apps/binapps/ffmpeg/4.1.3
+
 start_date=20210101
-days_to_process=2
+days_to_process=120
 
 if [[ -e file_list.txt ]] ; then rm file_list.txt ; fi
 

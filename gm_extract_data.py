@@ -95,20 +95,116 @@ def save_stat_data(demo,file_name):
 
 
 if __name__ == '__main__':
-    #import argparse
+    import argparse
     
     # read arguments from the command line
-    #parser = argparse.ArgumentParser(description="*** Tool for extracting Pollution data for GM region ***")
+    parser = argparse.ArgumentParser(description="*** Tool for extracting Pollution data for GM region ***")
     
+    # general arguments
+    parser.add_argument("--emep_file",type=str,help="Path to EMEP datafile (required)")
+    parser.add_argument("--wrf_file",type=str,help="Path to WRF datafile (required)")
+    parser.add_argument("--data_name",type=str,help="EMEP data variable to process (required)")
+    parser.add_argument("--figure_string",type=str,help="Prefix for figure file name: <prefix>_<date>.png (required if plotting data)")
+    parser.add_argument("--data_label",type=str,help="Label for data plots, e.g.: 'NO2' (required if plotting data)")
+    parser.add_argument("--data_unit",type=str,help="Unit for data plots, e.g.: 'ppb' (optional, but recommended, for plotting data)")
+    parser.add_argument("--file_name",type=str,help="Stats output file name (required if outputting stats data)")
     
+    # logical controls for plotting data or exporting the stats data
+    parser.add_argument("--plot_data",dest="plot_data_flag",action='store_true',help="Plot data heat map")
+    parser.add_argument("--no_plot_data",dest="plot_data_flag",action='store_false',help="Don't plot data heat map (default)")
+    parser.add_argument("--stat_data",dest="stat_data_flag",action='store_true',help="Generate stat data (default)")
+    parser.add_argument("--no_stat_data",dest="stat_data_flag",action='store_false',help="Generate stat data")
+    parser.set_defaults(plot_data_flag=False)
+    parser.set_defaults(stat_data_flag=True)
     
-    
-    # hardwiring values
-    gm_path = '../ShapeFiles/OS_Boundary_Line_2021-10/Data/GB/'
-    gm_shape_file = 'district_borough_unitary_region.shp'
 
-    emep_file = 'Base_day_SeptOct2020.nc'
-    wrf_file = 'wrfout_d01_2020-12-31_00:00:00'
+    # Colorbar limits, and number of gradient edges, to use for plotting data.
+    parser.add_argument("--data_min", type=float, dest="zmin", help="Lower bound for data colour range (default = 0)")
+    parser.add_argument("--data_max", type=float, dest="zmax", help="Upper bound for data colour range (default = 20)")
+    parser.add_argument("--data_levels", type=int, dest="zlevels", help="Number of bin boundaries for data colour range (default = 21)")
+    parser.set_defaults(zmin=0)
+    parser.set_defaults(zmax=20)
+    parser.set_defaults(zlevels=21)
+    #zlims=(zmin,zmax)
+    
+    args = parser.parse_args()
+    
+    
+    ## applying general arguments, with check to ensure required arguments are given
+    stop_program = False
+    error_string = ''
+
+    plot_data_flag = args.plot_data_flag
+    stat_data_flag = args.stat_data_flag
+    zlims = (args.zmin,args.zmax)
+    zlevels = args.zlevels
+    if plot_data_flag:
+        print('Model data will be plotted')
+    if stat_data_flag:
+        print('Model data statistics will be output')
+
+    #emep_file = '../../EMEP_Man/Base_hourInst_JanFeb2021.nc'
+    if args.emep_file:
+        emep_file = args.emep_file
+    else:
+        error_string += 'ERROR: Need to provide an EMEP file (--emep_file)\n'
+        stop_program = True
+    
+    #wrf_file = '../../WRF_Man/2021/wrfout_d02_2021-01-07_00:00:00'
+    if args.wrf_file:
+        wrf_file = args.wrf_file
+    else:
+        error_string += 'ERROR: Need to provide a WRF file (--wrf_file)\n'
+        stop_program = True
+        
+    #data_name='SURF_ppb_NO2'
+    if args.data_name:
+        data_name = args.data_name
+    else:
+        error_string += 'ERROR: Need to provide a data variable (--data_name)\n'
+        stop_program = True
+
+    #figure_string='no2_plots'
+    if plot_data_flag:
+        if args.figure_string:
+            figure_string = args.figure_string
+        else:
+            error_string += 'ERROR: Need to provide a figure prefix (--figure_string)\n'
+            stop_program = True     
+    else:
+        figure_string = 'no figure'
+
+    #data_label='NO2 (ppb)'
+    if plot_data_flag:
+        if args.data_label:
+            if args.data_unit:
+                data_label = f'{args.data_label} ({args.data_unit})'
+            else:
+                data_label = args.data_label
+        else:
+            error_string += 'ERROR: Need to provide a data label (--data_label)\n'
+            stop_program = True        
+    else:
+        data_label = 'no figure'
+
+    #file_name='no2_stat_data.csv'
+    if stat_data_flag:
+        if args.file_name:
+            file_name = args.file_name
+        else:
+            error_string += 'ERROR: Need to provide a stat data filename (--file_name)\n'
+            stop_program = True    
+    else:
+        file_name = 'no stats'
+
+    if stop_program:
+        raise ValueError('Not all required arguments have been provided, see error messages below:\n'+error_string)
+    
+    
+    
+    #### hardwiring values
+    gm_path = '../../Geographic_Data/OS_Boundary_Line_2021-10/Data/GB/'
+    gm_shape_file = 'district_borough_unitary_region.shp'
 
 
     GMBs = ['Bolton District (B)', 'Bury District (B)', 'Manchester District (B)', \
@@ -128,20 +224,7 @@ if __name__ == '__main__':
     xlims=(-1.9e5,-1.2e5)
     ylims=(3.6e5,4.2e5)
     
-    # Colorbar limits, and number of gradient edges, to use for plotting data.
-    zlims=(0,25)
-    zlevels=11
-    
-    # colorbar label, and variable name for extraction/plotting.
-    data_label='NO2 (ppb)'
-    data_name='SURF_ppb_NO2'
-    
-    figure_string='testfig2'
-    file_name='example_data2.csv'
-
-    # logical controls for plotting data or exporting the stats data
-    plot_data_flag = False
-    stat_data_flag = True
+        
 
 
     #### working code
@@ -160,13 +243,14 @@ if __name__ == '__main__':
     # pull out model time
     time = emep_in['time']
 
+    # save stats data
+    if stat_data_flag:
+        save_stat_data(demo,file_name)  
+
     # generate pollution maps
     if plot_data_flag:
         plot_data(demo,time,wrf_in,xlims,ylims,zlims,zlevels,data_label,figure_string)  
     
-    # save stats data
-    if stat_data_flag:
-        save_stat_data(demo,file_name)  
 
 
 
