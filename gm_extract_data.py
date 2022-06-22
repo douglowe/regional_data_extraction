@@ -255,7 +255,7 @@ if __name__ == '__main__':
         regridder = create_regrid_template(emep_in,grid_increment)
         demo = regridder(emep_in[data_name])
         demo.name = data_name
-        
+        demo.to_netcdf('example_regridded_data.nc')
 
     else:
         # create data mask
