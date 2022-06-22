@@ -11,11 +11,11 @@ from shapely.geometry import Point
 
 
 
-def create_regrid_template(dataset,grid_increment):
+def create_regrid_template(dataset,lat_lower,lat_higher,long_lower,long_higher,grid_increment):
 
     global_grid = xr.Dataset(
-        {'lat': (['lat'], np.arange(52,55,grid_increment)),
-        'lon': (['lon'], np.arange(-4,0,grid_increment))}
+        {'lat': (['lat'], np.arange(lat_lower,lat_higher,grid_increment)),
+        'lon': (['lon'], np.arange(long_lower,long_higher,grid_increment))}
         )
         
     regridder = xe.Regridder(dataset,global_grid,'bilinear')
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     ylims=(3.6e5,4.2e5)
     
 
-    grid_increment = 0.05
+    grid_increment = 0.01
 
 
     #### working code
@@ -252,10 +252,10 @@ if __name__ == '__main__':
 
     # regrid the data, if required
     if regrid_data_flag:
-        regridder = create_regrid_template(emep_in,grid_increment)
+        regridder = create_regrid_template(emep_in,lat_lower,lat_higher,long_lower,long_higher,grid_increment)
         demo = regridder(emep_in[data_name])
         demo.name = data_name
-        demo.to_netcdf('example_regridded_data.nc')
+        demo.to_netcdf('pm25_janfeb2021_regrid.nc')
 
     else:
         # create data mask
