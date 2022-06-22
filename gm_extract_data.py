@@ -3,12 +3,23 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 import xarray as xr
+import xesmf as xe
 import salem
 import matplotlib.pyplot as plt
 import cartopy
 from shapely.geometry import Point
 
 
+
+def create_regrid_template(dataset,grid_increment):
+
+    global_grid = xr.Dataset(
+        {'lat': (['lat'], np.arange(52,55,grid_increment)),
+        'lon': (['lon'], np.arange(-4,0,grid_increment))}
+        )
+        
+    regridder = xe.Regridder(dataset,global_grid,'bilinear')
+    return(regridder)
 
 
 def load_shapefiles(GMBs,path,shape_file):
@@ -114,9 +125,11 @@ if __name__ == '__main__':
     parser.add_argument("--no_plot_data",dest="plot_data_flag",action='store_false',help="Don't plot data heat map (default)")
     parser.add_argument("--stat_data",dest="stat_data_flag",action='store_true',help="Generate stat data (default)")
     parser.add_argument("--no_stat_data",dest="stat_data_flag",action='store_false',help="Generate stat data")
+    parser.add_argument("--regrid_data",dest="regrid_data_flag",action='store_true',help="Regrid data to regular Lat/Lon grid")
+    parser.add_argument("--no_regrid_data",dest="regrid_data_flag",action='store_false',help="Don't regrid data (default)")
     parser.set_defaults(plot_data_flag=False)
     parser.set_defaults(stat_data_flag=True)
-    
+    parser.set_defaults(regrid_data_flag=False)
 
     # Colorbar limits, and number of gradient edges, to use for plotting data.
     parser.add_argument("--data_min", type=float, dest="zmin", help="Lower bound for data colour range (default = 0)")
@@ -136,6 +149,7 @@ if __name__ == '__main__':
 
     plot_data_flag = args.plot_data_flag
     stat_data_flag = args.stat_data_flag
+    regrid_data_flag = args.regrid_data_flag
     zlims = (args.zmin,args.zmax)
     zlevels = args.zlevels
     if plot_data_flag:
@@ -224,7 +238,8 @@ if __name__ == '__main__':
     xlims=(-1.9e5,-1.2e5)
     ylims=(3.6e5,4.2e5)
     
-        
+
+    grid_increment = 0.05
 
 
     #### working code
@@ -235,21 +250,30 @@ if __name__ == '__main__':
     emep_in = xr.open_dataset(emep_file, decode_coords="all")
     ds = xr.open_dataset(wrf_file)
 
-    # create data mask
-    mask = build_mask_array(GMB_area,ds,lat_lower,lat_higher,long_lower,long_higher)
+    # regrid the data, if required
+    if regrid_data_flag:
+        regridder = create_regrid_template(emep_in,grid_increment)
+        demo = regridder(emep_in[data_name])
+        demo.name = data_name
+        
+
+    else:
+        # create data mask
+        mask = build_mask_array(GMB_area,ds,lat_lower,lat_higher,long_lower,long_higher)
     
-    # apply data mask
-    demo = emep_in[data_name].where(cond=mask==True, other=np.nan)
-    # pull out model time
-    time = emep_in['time']
+        # apply data mask
+        demo = emep_in[data_name].where(cond=mask==True, other=np.nan)
+    
+        # pull out model time
+        time = emep_in['time']
 
-    # save stats data
-    if stat_data_flag:
-        save_stat_data(demo,file_name)  
+        # save stats data
+        if stat_data_flag:
+            save_stat_data(demo,file_name)  
 
-    # generate pollution maps
-    if plot_data_flag:
-        plot_data(demo,time,wrf_in,xlims,ylims,zlims,zlevels,data_label,figure_string)  
+        # generate pollution maps
+        if plot_data_flag:
+            plot_data(demo,time,wrf_in,xlims,ylims,zlims,zlevels,data_label,figure_string)  
     
 
 
