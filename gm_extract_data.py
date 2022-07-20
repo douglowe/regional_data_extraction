@@ -118,7 +118,8 @@ if __name__ == '__main__':
     parser.add_argument("--figure_string",type=str,help="Prefix for figure file name: <prefix>_<date>.png (required if plotting data)")
     parser.add_argument("--data_label",type=str,help="Label for data plots, e.g.: 'NO2' (required if plotting data)")
     parser.add_argument("--data_unit",type=str,help="Unit for data plots, e.g.: 'ppb' (optional, but recommended, for plotting data)")
-    parser.add_argument("--file_name",type=str,help="Stats output file name (required if outputting stats data)")
+    parser.add_argument("--stats_file_name",type=str,help="Stats output file name, csv (required if outputting stats data)")
+    parser.add_argument("--export_file_name",type=str,help="Export output file name, netcdf (required if exporting data)")
     
     # logical controls for plotting data or exporting the stats data
     parser.add_argument("--plot_data",dest="plot_data_flag",action='store_true',help="Plot data heat map")
@@ -127,9 +128,12 @@ if __name__ == '__main__':
     parser.add_argument("--no_stat_data",dest="stat_data_flag",action='store_false',help="Generate stat data")
     parser.add_argument("--regrid_data",dest="regrid_data_flag",action='store_true',help="Regrid data to regular Lat/Lon grid")
     parser.add_argument("--no_regrid_data",dest="regrid_data_flag",action='store_false',help="Don't regrid data (default)")
+    parser.add_argument("--export_data",dest="export_data_flag",action='store_true',help="Export data to netcdf file")
+    parser.add_argument("--no_export_data",dest="export_data_flag",action='store_false',help="Don't export data to netcdf file")
     parser.set_defaults(plot_data_flag=False)
     parser.set_defaults(stat_data_flag=True)
     parser.set_defaults(regrid_data_flag=False)
+    parser.set_defaults(export_data_flag=False)
 
     # Colorbar limits, and number of gradient edges, to use for plotting data.
     parser.add_argument("--data_min", type=float, dest="zmin", help="Lower bound for data colour range (default = 0)")
@@ -150,6 +154,7 @@ if __name__ == '__main__':
     plot_data_flag = args.plot_data_flag
     stat_data_flag = args.stat_data_flag
     regrid_data_flag = args.regrid_data_flag
+    export_data_flag = args.export_data_flag
     zlims = (args.zmin,args.zmax)
     zlevels = args.zlevels
     if plot_data_flag:
@@ -203,13 +208,24 @@ if __name__ == '__main__':
 
     #file_name='no2_stat_data.csv'
     if stat_data_flag:
-        if args.file_name:
-            file_name = args.file_name
+        if args.stats_file_name:
+            stats_file_name = args.stats_file_name
         else:
-            error_string += 'ERROR: Need to provide a stat data filename (--file_name)\n'
+            error_string += 'ERROR: Need to provide a stat data filename (--stats_file_name)\n'
             stop_program = True    
     else:
-        file_name = 'no stats'
+        stats_file_name = 'no stats'
+
+    #file_name='no2_stat_data.csv'
+    if export_data_flag:
+        if args.export_file_name:
+            export_file_name = args.export_file_name
+        else:
+            error_string += 'ERROR: Need to provide a stat data filename (--export_file_name)\n'
+            stop_program = True    
+    else:
+        export_file_name = 'no export'
+
 
     if stop_program:
         raise ValueError('Not all required arguments have been provided, see error messages below:\n'+error_string)
@@ -255,7 +271,9 @@ if __name__ == '__main__':
         regridder = create_regrid_template(emep_in,lat_lower,lat_higher,long_lower,long_higher,grid_increment)
         demo = regridder(emep_in[data_name])
         demo.name = data_name
-        demo.to_netcdf('pm25_janfeb2021_regrid.nc')
+        
+        if export_data_flag:
+            demo.to_netcdf(export_file_name)
 
     else:
         # create data mask
@@ -269,7 +287,7 @@ if __name__ == '__main__':
 
         # save stats data
         if stat_data_flag:
-            save_stat_data(demo,file_name)  
+            save_stat_data(demo,stats_file_name)  
 
         # generate pollution maps
         if plot_data_flag:
